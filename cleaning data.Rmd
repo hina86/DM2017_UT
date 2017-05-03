@@ -1,0 +1,107 @@
+---
+title: "Untitled"
+author: "Hina Anwar"
+date: "14 April 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#
+
+```{r}
+
+library(tm)
+
+data <- as.data.frame(read.csv  ("c:/users/hina/documents/Energy_aware_data.csv",header=T,stringsAsFactors=F,sep=','))
+
+data <- as.data.frame(data[,c(2,3,5)])
+
+data1 <- transform(data, payload_commit_msg=gsub("[^[:alnum:][:blank:]_./]", " ", payload_commit_msg))
+
+
+stopwords = read.csv  ("c:/users/hina/documents/stopwords1.txt",header=F,stringsAsFactors=F,sep=',')
+stopwords= t(stopwords)
+# stop words file
+x  = data1$payload_commit_msg        #commit data
+x  =  removeWords(x,stopwords)     #Remove stopwords
+
+ data1$payload_commit_msg_new <- x 
+```
+
+
+
+```{r}
+*energy consum*, *energy efficien*, *energy sav*, *save energy*, *power consum*, *power efficien*, *power sa*, *save power*
+
+```
+
+
+```{r}
+
+library(SnowballC)
+library(e1071)
+t<- data1$payload_commit_msg_new
+
+
+a <- Corpus(VectorSource(t))
+
+a <- tm_map(a, removeNumbers)
+a <- tm_map(a, removePunctuation)
+a <- tm_map(a , stripWhitespace)
+a <- tm_map(a, tolower)
+a <- tm_map(a, removeWords, stopwords("english"))
+# this stopword file is at C:\Users\[username]\Documents\R\win-library\2.13\tm\stopwords 
+a <- tm_map(a, stemDocument, language = "english")
+a
+
+# DTM
+
+adtm <-DocumentTermMatrix(a) 
+
+adtm <- removeSparseTerms(adtm, 0.95)
+str(adtm)
+v <- as.matrix(adtm)
+v
+t <-as.data.frame(cbind(v, data$TRUE_VALUE, data$repo_name))
+colnames(t)[colnames(t)== "V43"] <- "target"
+colnames(t)[colnames(t)== "V44"] <- "repo_name"
+
+ 
+# Split data
+indexes = sample(1:nrow(t), size=0.8*nrow(t))
+train = t[indexes,]
+test = t[-indexes,]
+test1= test[,1:(ncol(test)-1)]
+colnames(test)
+
+# logistic regression 
+model <- naiveBayes(V52 ~.,data=train)
+summary(model)
+fitted.results <- predict(model,newdata=test1)
+ fitted.results
+# # # Performance Scores
+ misClasificError <- mean(fitted.results != test$V52)
+ print(paste('Accuracy',1-misClasificError))
+# # 
+ tp = sum(test$V52==1 & fitted.results==1)
+ fp = sum(test$V52==0 & fitted.results==1)
+ fn = sum(test$V52==1 & fitted.results == 0)
+ tn = sum(test$V52==0 & fitted.results == 0)
+# # 
+ recall = tp/(tp+fn)
+ message("Recall for Model : ",recall)
+ precision=tp/(tp+fp)
+ message("precision for Model : ",precision)
+ f1= 2* (precision * recall)/(precision+recall)
+ message("F1 score for Model  : ",f1)
+ accuracy= (tp+tn)/(tp+tn+fp+fn)
+ message("accuraccy for Model  : ",accuracy)
+
+
+```
+
+
+
