@@ -289,7 +289,7 @@ print(paste0("AUC is Decision Tree: ",AUC(tree.res2,train.subset2[,797])))
 
 ```
 
-## Test classifeir 
+#### Test classifeir 
 
 ```{r warning=FALSE,message=FALSE}
 avg.score3 <- combiner2(train2,test2,cutoff2) 
@@ -315,30 +315,21 @@ print(paste0("AUC is Decision Tree: ",AUC(tree.res3,test2[,797])))
 
 ```
 
+```{r}
+library(dplyr)
+library(party)
+library(FSelector)
+
+
+```
+
+
 ##Iteration 3:
 ### Done by: Behzad
 ```{r}
-dt3 <- df <- read_csv("./trigrams.csv", col_types = cols(cyl = col_number()),na = "NA")
+dt3 <- df <- read_csv("./trigrams3.csv", col_types = cols(cyl = col_number()),na = "NA")
 ```
-#### Density Plot
 
-```{r warning=FALSE,message=FALSE}
-energy.related.repos<-as.numeric(unlist(subset(dt3,target==1,)))
-not.energy.related.repos<-as.numeric(unlist(subset(dt3,target==0,)))
-
- ggplot() +
-  geom_density(aes(x=x,colour="Energy related") , data=data.frame(x=energy.related.repos))+
-  geom_density(aes(x=x, colour="Not energy related"), data=data.frame(x=not.energy.related.repos))
-
-```
-#### Scatter Plot
-```{r warning=FALSE,message=FALSE}
-# energy.related.repos<-subset(dt2,target==1,)
-# not.energy.related.repos<-subset(dt2,target==0,)
-# ggplot(NULL, aes(x=dt2$, y=target)) +
-#   geom_point(data=energy.related.repos, aes(x=score, y=target,color="Energy Related"))+
-#   geom_point(data=not.energy.related.repos, aes(x=score, y=target,color="Not Energy Related"))
-```
 #### K-Fold
 ```{r warning=FALSE,message=FALSE}
 
@@ -348,5 +339,91 @@ train3<-dt3[index,]
 test3<-dt3[-index,]
 cutoff3<-0.47
 ```
+#### Averaging Models
+```{r}
+combiner3 <- function(train3,test3,cutoff3){
+  reg <- logestic.regresion3(train3,test3,cutoff3)
+  svm <- sVM3(train3,test3,cutoff3)
+  tree <-decision.tree3(train3,test3,cutoff3)
+   avg <- (reg+svm+tree)/3
+   avg
+}
+```
+
+#### Logestic Regresion
+
+```{r warning=FALSE,message=FALSE}
+logestic.regresion3 <-function(train3,test3,cutoff3){
+  model3 <- lm(target~. ,train3)
+  pre3 <- predict(model3,test3)
+  pre3
+
+}
+```
+
+#### Decision Tree
+
+```{r warning=FALSE,message=FALSE}
+decision.tree3 <- function(train3,test3,cutoff3){
+    fit3 <- rpart(target~. , method="class", data=train3)
+    tree3 <- predict(fit3, test3)
+    tree3[,2]
+}
+```
+
+#### SVM
+
+```{r warning=FALSE,message=FALSE}
+sVM3 <- function(train3,test3,cutoff3){
+   model3 <- svm(target ~ . , train3)
+   pre3 <- predict(model3, test3)
+   svm3 <-(pre3 > cutoff3)
+   pre3
+}
+```
+## Test classifeir with Train data
+
+```{r warning=FALSE,message=FALSE}
 
 
+train.subset30 <- train3[1:round(nrow(train3)/5),]
+avg.score30 <- combiner3(train3,train.subset30,cutoff3)
+logestic.res30 <- logestic.regresion3(train3,train.subset30,cutoff3)
+svM.res30    <- sVM3(train3,train.subset30,cutoff3)
+tree.res30   <- decision.tree3(train3,train.subset30,cutoff3)
+
+
+
+ggplot(NULL,aes(x=x,y=y))+
+  geom_line(data=rocCurve(avg.score30,train.subset30[,1274]),size = 1,aes( color = "Average"))+
+  geom_line(data=rocCurve(logestic.res30,train.subset30[,1274]),size = 1,aes( color = "Logestic Regresion"))+
+  geom_line(data=rocCurve(svM.res30,train.subset30[,1274]),size = 1,aes( color = "SVM"))+
+  geom_line(data=rocCurve(tree.res30,train.subset30[,1274]),size = 1,aes( color = "Decision Tree"))+
+  labs(title= "ROC curve", x = "False Positive Rate",y = "True Positive Rate")
+```
+#### AUC Train
+
+```{r warning=FALSE,message=FALSE}
+
+print(paste0("AUC is Avg: ",AUC(avg.score30,train.subset30[,1274])))
+print(paste0("AUC is Logestic Regresion: ",AUC(logestic.res30,train.subset30[,1274])))
+print(paste0("AUC is SVM: ",AUC(svM.res30,train.subset30[,1274])))
+print(paste0("AUC is Decision Tree: ",AUC(tree.res30,train.subset30[,1274])))
+
+```
+#### Test classifeir 
+
+```{r warning=FALSE,message=FALSE}
+
+avg.score31 <- combiner3(train3,test3,cutoff3) 
+logestic.res31 <- logestic.regresion3(train3,test3,cutoff3)
+svM.res31    <- sVM3(train3,test3,cutoff3)
+tree.res31   <- decision.tree3(train3,test3,cutoff3)
+ggplot(NULL,aes(x=x,y=y))+
+  geom_line(data=rocCurve(avg.score31,test3[,1274]),size = 1,aes( color = "Average"))+
+  geom_line(data=rocCurve(logestic.res31,test3[,1274]),size = 1,aes( color = "Logestic Regresion"))+
+  geom_line(data=rocCurve(svM.res31,test3[,1274]),size = 1,aes( color = "SVM"))+
+  geom_line(data=rocCurve(tree.res31,test3[,1274]),size = 1,aes( color = "Decision Tree"))+
+  labs(title= "ROC curve", x = "False Positive Rate",y = "True Positive Rate")
+
+```
