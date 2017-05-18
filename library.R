@@ -44,6 +44,11 @@ sVM <- function(train,test){
   predict(model, test)
 }
 
+radial.svm <- function(train,test){
+  model <- svm(target ~ . , train, kernel="radial", cost=1, gamma=0.5)
+  predict(model, test)
+}
+
 rocCurve <-function(prediction,real){  
   res<-prediction(prediction, real, label.ordering = NULL)
   roc.perf = performance(res, measure = "tpr", x.measure = "fpr")
