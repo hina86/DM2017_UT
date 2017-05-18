@@ -1,0 +1,96 @@
+---
+title: "Project-DM2017"
+author: "Salman Lashkarara,Hina,Behzad"
+date: "May 5, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ROCR)
+library(knitr)
+library(readr)
+dt <- read_csv("./data/bigrams3.csv", na = "NA")
+source("./library.R")
+
+```
+
+##Iteration 2:
+
+
+#### K-Fold
+```{r warning=FALSE,message=FALSE}
+
+print(paste0("Total Number of Rows: ",nrow(dt)))
+index<-sample(nrow(dt),round(nrow(dt)*0.8))
+train <-dt[index,]
+test <-dt[-index,]
+
+```
+
+## Test classifeir with Train data
+
+```{r warning=FALSE,message=FALSE}
+
+
+train.subset<- train[1:round(nrow(train)/5),]
+avg.score   <- combiner(train,train.subset)
+logestic.res<- logestic.regresion(train,train.subset)
+svM.res     <- sVM(train,train.subset)
+tree.res    <- decision.tree(train,train.subset)
+
+
+
+ggplot(NULL,aes(x=x,y=y))+
+  geom_line(data=rocCurve(avg.score,train.subset[,797]),size = 1,aes( color = "Average"))+
+  geom_line(data=rocCurve(logestic.res,train.subset[,797]),size = 1,aes( color = "Logestic Regresion"))+
+  geom_line(data=rocCurve(svM.res,train.subset[,797]),size = 1,aes( color = "SVM"))+
+  geom_line(data=rocCurve(tree.res,train.subset[,797]),size = 1,aes( color = "Decision Tree"))+
+  labs(title= "ROC curve", x = "False Positive Rate",y = "True Positive Rate")
+```
+#### AUC Train
+
+
+```{r warning=FALSE,message=FALSE}
+
+avg<-AUC(avg.score,train.subset[,797])
+logestic.regression<-AUC(logestic.res,train.subset[,797])
+svm<-AUC(svM.res,train.subset[,797])
+decission.tree<-AUC(tree.res,train.subset[,797])
+
+dt<-data.frame(method=c("logestic Regression","Decision Tree","SVM","Average"),AUC=c(logestic.regression,decission.tree,svm,avg))
+
+kable(dt)
+```
+
+#### Test classifeir 
+
+```{r warning=FALSE,message=FALSE}
+avg.score <- combiner(train,test) 
+logestic.res <- logestic.regresion(train,test)
+svM.res    <- sVM(train,test)
+tree.res   <- decision.tree(train,test)
+ggplot(NULL,aes(x=x,y=y))+
+  geom_line(data=rocCurve(avg.score,test[,797]),size = 1,aes( color = "Average"))+
+  geom_line(data=rocCurve(logestic.res,test[,797]),size = 1,aes( color = "Logestic Regresion"))+
+  geom_line(data=rocCurve(svM.res,test[,797]),size = 1,aes( color = "SVM"))+
+  geom_line(data=rocCurve(tree.res,test[,797]),size = 1,aes( color = "Decision Tree"))+
+  labs(title= "ROC curve", x = "False Positive Rate",y = "True Positive Rate")
+```
+
+#### AUC Test
+
+```{r warning=FALSE,message=FALSE}
+
+
+avg<-AUC(avg.score,test[,797])
+logestic.regression<-AUC(logestic.res,test[,797])
+svm<-AUC(svM.res,test[,797])
+decission.tree<-AUC(tree.res,test[,797])
+
+dt<-data.frame(method=c("logestic Regression","Decision Tree","SVM","Average"),AUC=c(logestic.regression,decission.tree,svm,avg))
+
+kable(dt)
+
+```
+
