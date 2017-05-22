@@ -1,0 +1,79 @@
+---
+title: "Feature Selection"
+author: "Salman Lashkarara"
+date: "May 18, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ROCR)
+library(knitr)
+library(readr)
+source("./library.R")
+library(mlbench)
+library(caret)
+dt <- read_csv("./data/bigrams3.csv", na = "NA")
+```
+
+
+
+
+```{r}
+
+correlationMatrix <- cor(dt[,1:NCOL(dt)])
+
+df<-as.data.frame(as.table(correlationMatrix))
+colnames(df) <- c("Features", "StudiedFeature","Corelation Score")
+
+target<-subset(df,StudiedFeature=='target')
+dt<-dt[, c(unlist(head(  target[ order(target[,3],decreasing = T ), ],121)[,"Features"]))]
+
+```
+
+#### K-Fold
+```{r warning=FALSE,message=FALSE}
+
+print(paste0("Total Number of Rows: ",nrow(dt)))
+index<-sample(nrow(dt),round(nrow(dt)*0.8))
+train <-dt[index,]
+test <-dt[-index,]
+
+```
+
+```{r warning=FALSE,message=FALSE}
+source("./library.R")
+logestic.res <- logestic.regresion(train,test)
+svM.res    <- sVM(train,test)
+radialsvm   <- radial.svm(train,test)
+tree.res   <- decision.tree(train,test)
+avg.score <- combiner(train,test) 
+
+ggplot(NULL,aes(x=x,y=y))+
+  geom_line(data=rocCurve(avg.score,test$target),size = 1,aes( color = "Average"))+
+  geom_line(data=rocCurve(logestic.res,test$target),size = 1,aes( color = "Logestic Regresion"))+
+  geom_line(data=rocCurve(svM.res,test$target),size = 1,aes( color = "Linear SVM"))+
+  geom_line(data=rocCurve(tree.res,test$target),size = 1,aes( color = "Decision Tree"))+
+  geom_line(data=rocCurve(radialsvm,test$target),size = 1,aes( color = "Radial SVM"))+
+  labs(title= "ROC curve", x = "False Positive Rate",y = "True Positive Rate")
+```
+
+#### AUC Test
+
+```{r warning=FALSE,message=FALSE}
+
+
+avg<-AUC(avg.score,test$target)
+logestic.regression<-AUC(logestic.res,test$target)
+linear.svm<-AUC(svM.res,test$target)
+radial.svm<-AUC(radialsvm,test$target)
+decission.tree<-AUC(tree.res,test$target)
+
+dt<-data.frame(method=c("logestic Regression","Decision Tree","Linear SVM ","Radial SVM","Average"),AUC=c(logestic.regression,decission.tree,linear.svm,radial.svm,avg))
+
+kable(dt)
+
+
+```
+
+
